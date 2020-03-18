@@ -1,4 +1,4 @@
-from lark import Lark
+from lark import Lark, tree
 
 grammar = r'''
     programme: txt | txt programme | dumbo_bloc | dumbo_bloc programme
@@ -26,6 +26,8 @@ grammar = r'''
     %ignore /[ \n]/
 '''
 
+# TODO ajouter \n\p `a STRING et TXT
+
 l: Lark = Lark(grammar, start='programme')
 
 text = """
@@ -38,3 +40,18 @@ label_list := ('American History X', 'Snowblind', 'Lake of Fire');
 tree = l.parse(text, start="programme")
 
 print(tree)
+
+
+def txt(node: tree):
+    print(node.content) # TODO
+
+def programme(head: tree):
+    if head.data != "programme":
+        raise ValueError("Not a program!")
+
+    for child in head.children:
+        if child.data == "txt":
+            try:
+                txt(child)
+            except ValueError:
+                continue
