@@ -42,8 +42,54 @@ tree = l.parse(text, start="programme")
 print(tree)
 
 
+
+class Context:
+
+    local: dict
+    # name: Context
+
+    def __init__(self):
+        self.local = dict()
+        self.next = None
+
+    def add(self, variable: tuple):
+        self.local[variable[0]] = variable[1]
+
+    def update(self, variable: tuple):
+        val = self.local[variable[0]]
+
+        if val is None:
+            if self.next is None:
+                return False
+            else:
+                self.next.update(variable)
+                return True
+
+        self.local[variable[0]] = variable[1]
+        return True
+
+    def get(self, name: str):
+        val = self.local[name]
+
+        if val is None:
+            if self.next is None:
+                return None
+            else:
+                return self.next.get(name)
+        return val
+
+    def pop_scope(self):
+        return self.next
+
+    def push_scope(self):
+        new = Context()
+        new.next = self
+        return new
+
+
 def txt(node: tree):
     print(node.content) # TODO
+
 
 def programme(head: tree):
     if head.data != "programme":
