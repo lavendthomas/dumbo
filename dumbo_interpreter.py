@@ -2,8 +2,10 @@ import os
 import sys
 from typing import Union
 
-from lark import Lark, tree
+from lark import Lark, tree, Transformer
 from lark.lexer import Token
+
+from functools import reduce
 
 
 
@@ -11,178 +13,174 @@ from lark.lexer import Token
 # TODO ajouter \n\p `a STRING et TXT
 
 
+class Variable:
 
+    def __init__(self, type, name):
+        self._type = type
+        self._name = name
 
+    def get(self):
+        return self._name
+
+    def type(self):
+        return self._type
+
+    def __hash__(self):
+        return self._name.__hash__()
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return other == self._name
+        if isinstance(other, Variable):
+            return self._name == other._name and self._type == other._type
+        return False
+
+    def __str__(self):
+        return "{"+ self._type + " " + self._name + "}"
+
+    def __repr__(self):
+        return str(self)
 
 class Context:
 
-    local: dict
-    # name: Context
+    _local: dict
+    # _name: Context
 
     def __init__(self):
-        self.local = dict()
-        self.next = None
+        self._local = dict()    # key: Variable -> Union[str, int, bool, list]
+        self._next = None
 
-    def add(self, variable: tuple):
-        self.local[variable[0]] = variable[1]
+    def add(self, key: Variable, value: Union[str, int, bool, list]):
+        self._local[key] = value
 
-    def update(self, variable: tuple):
-        val = self.local[variable[0]]
+    def typeof(self, name: str):
+        for var in self._local.keys():
+            if var == name:
+                return var.type()
+        if self._next is not None:
+            return self._next.typeof(name)
+        return False
+
+    def update(self, key: Variable, new_value: Union[str, int, bool, list]):
+        val = self._local[key]
 
         if val is None:
-            if self.next is None:
+            if self._next is None:
                 return False
             else:
-                self.next.update(variable)
+                self._next.update(key, new_value)
                 return True
 
-        self.local[variable[0]] = variable[1]
+        self._local[key] = new_value
         return True
 
-    def get(self, name: str):
-        val = self.local[name]
+    def get(self, key: Variable):
+        val = self._local[key]
 
         if val is None:
-            if self.next is None:
+            if self._next is None:
                 return None
             else:
-                return self.next.get(name)
+                return self._next.get(key)
         return val
 
     def pop_scope(self):
-        return self.next
+        return self._next
 
     def push_scope(self):
         new = Context()
-        new.next = self
+        new._next = self
         return new
 
 
-def txt(context: Context, head: tree):
-    if head.data != "programme":
-        raise ValueError("Not a program!")
 
-    print(head)
+class Interpreter(Transformer):
+
+    variables: Context
+
+    def __init__(self, visit_tokens):
+        super().__init__(visit_tokens=visit_tokens)
+        self.variables = Context()
+
+    def txt(self, text_token) -> str:
+        print(text_token[0])
+        return text_token[0]    # put the text on the tree
+
+    def dumbo_bloc(self, args):
+        self.variables = self.variables.push_scope()
+        return args
+
+    def string(self, string) -> str:
+        val = string[0].value
+        return val[1:len(val)-1]        # remove surrounding quotes
+
+    def variable_get(self, variable) -> Variable:
+        variable_name = variable[0].value
+        return self.variables.get(variable_name)
 
 
-def string_expression_to_str(string_expression: tree) -> str:
-    if string_expression.data != "string_expression":
-        raise ValueError("Not a string_expression!")
+    def variable_set(self, variable) -> Variable:
+        """
+        :return: the name of the variable
+        """
+        type = variable[0].value
+        value = variable[1].value
+        return Variable(type, value)
 
-    # TODO additional checks
-
-    return string_expression.children[0].value
-
-
-def string_list_interior(interior: tree) -> list:
-    if interior.data != "string_list_interior":
-        raise ValueError("Not a string_list_interior!")
-    res = list()
-    for child in interior.children:
-        if isinstance(child.__class__, Token.__class__):
-            if child.type == "STRING":
-                res.append(child.value)
-            else:
-                raise ValueError("Expected a STRING.")
+    def string_expression(self, arg) -> str:
+        token = arg[0]
+        if isinstance(token, str):    # if concat or string
+            return token
+        if isinstance(token, list):   # if a list variable is used as a parameter
+            return str(token)
+        if token.type == "VARIABLE":
+            return self.variables.get(token)         # TODO Afficher un message d'erreur si variable inconnue
         else:
-            res.extend(string_list_interior(child))
-    return res
+            raise ValueError("Unknown string")
 
+    def string_concat(self, args) -> str:
+        return reduce(lambda a, b: a + b, args, "")
 
-def string_list_to_list(string_list: tree) -> list:
-    if string_list.data != "string_list":
-        raise ValueError("Not a string_list!")
+    def expression_print(self, args):
+        # print can use any type as a parameter, so no checks are necessary
+        print(args[0])
+        return None
 
-    return string_list_interior(string_list.children[0])
+    def expression_assign(self, args):
+        key = args[0]
+        value = args[1]
+        self.variables.add(key, value)
+        return None
 
-def print_string_expression(context: Context, head: tree):
-    key: str = head.children[0].value
-    print(context.get(key))
+    def string_list(self, args):
+        return args[0]
 
-
-def expression_print(context: Context, head: tree):
-    if head.data != "expression_print":
-        raise ValueError("Not a expression_print!")
-
-    # We can assume only string_expression can be printed
-    print_string_expression(context, head.children[0])
-
-
-def expression_for_0(context: Context, head: tree):
-    pass
-
-
-def expression_for_1(context: Context, head: tree):
-    pass
-
-
-def expression_assign(context: Context, head:tree):
-    key: str = head.children[0].value
-    val: Union[str, list] = ""
-
-    if head.children[1].data == "string_expression":
-        val = string_expression_to_str(head.children[1])
-    elif head.children[1].data == "string_list":
-        val = string_list_to_list(head.children[1])
-
-    context.add((key, val))
-
-
-def expression(context: Context, head: tree):
-    if head.data != "expression":
-        raise ValueError("Not an expressions_list!")
-
-    if head.children[0].data == "expression_print":
-        expression_print(context, head.children[0])
-    elif head.children[0].data == "expression_for_0":
-        expression_for_0(context, ...)
-    elif head.children[0].data == "expression_for_1":
-        expression_for_1(context, ...)
-    elif head.children[0].data == "expression_assign":
-        expression_assign(context, head.children[0])
-
-
-def expressions_list(context: Context, head: tree):
-    if head.data != "expressions_list":
-        raise ValueError("Not an expressions_list!")
-
-    for child in head.children:
-        if child.data == "expression":
-            expression(context, child)
-        if child.data == "expressions_list":
-            expressions_list(context, child)
-
-def dumbo_block(context:Context, head: tree):
-    if head.data != "dumbo_bloc":
-        raise ValueError("Not a dumbo_bloc!")
-
-    new_scope = context.push_scope()
-
-    expressions_list(new_scope, head.children[0]) # Only an expression_list can be present
-
-
-def programme(context: Context, head: tree):
-    if head.data != "programme":
-        raise ValueError("Not a program!")
-
-    for child in head.children:
-        if child.data == "txt":
-            txt(context, child)
-        if child.data == "dumbo_bloc":
-            dumbo_block(context, child)
-        if child.data == "programme":
-            programme(context, child)
+    def string_list_interior(self, args):
+        if len(args) == 1:
+            # end of the list
+            return [args[0]]
+        elif len(args) == 2:
+            return [args[0]] + args[1]
 
 
 if __name__ == '__main__':
 
     grammar = open("dumbo.lark", "r")
 
-    l: Lark = Lark(grammar.read(), start='programme')
+    text = grammar.read()
 
-    variables = Context()
+
+    interpreter: Lark = Lark(text,
+                             parser='lalr',
+                             start='programme',
+                             transformer=Interpreter(visit_tokens=True))
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
-            tree = l.parse(f.read(), start="programme")
-            programme(variables, tree)
+            #tree = Lark(text, start='programme')\
+            #    .parse(f.read())
+            #print(tree)
+            #continue
+            tree = interpreter.parse(f.read())
+            # programme(variables, tree)
+            print(tree)

@@ -9,20 +9,61 @@ expression: expression_print
           | expression_for_1
           | expression_assign
 
-expression_print : "print" string_expression
-expression_for_0 : "for" VARIABLE "in" string_list "do" expressions_list "endfor"
-expression_for_1 : "for" VARIABLE "in" VARIABLE "do" expressions_list "endfor"
-expression_assign: VARIABLE ":=" string_expression
-                 | VARIABLE ":=" string_list
+expression_print   : "print" string_expression
+expression_for_0   : "for" variable_set "in" string_list "do" expressions_list "endfor"
+expression_for_1   : "for" variable_set "in" variable_get "do" expressions_list "endfor"
+expression_assign  : variable_set ":=" string_expression
+                   | variable_set ":=" string_list
+expression_if      : "if" test "do" expressions_list "endif"
 
-string_expression: STRING
-                 | VARIABLE
-                 | string_expression "." string_expression
+string_expression: string
+                 | variable_get
+                 | string_concat
+string_concat: string_expression "." string_expression
+
 string_list: "(" string_list_interior ")"
-string_list_interior: STRING "," string_list_interior | STRING
+string_list_interior: string "," string_list_interior | string
 
+test: BOOLEAN
+    | or_test
+
+or_test : and_test ("or" and_test)*
+and_test: not_test ("and" not_test)*
+not_test: "not" not_test
+        | comparison
+        | BOOLEAN
+
+comparison: arithm_expr (OPERATOR arithm_expr)*
+
+arithm_expr: term (ADD_OP term)*
+term: factor (MULT_OP factor)*
+factor: integer
+
+
+ADD_OP : "+" | "-"
+MULT_OP: "*" | "/"
+
+BOOLEAN: "true" | "false"
+
+OPERATOR: "="
+        | "<"
+        | "<="
+        | ">"
+        | ">="
+        | "!="
+
+integer : NUMBER
+
+string  : STRING
+
+variable_get: VARIABLE      // We handle these two variable uses
+variable_set: TYPE VARIABLE      // differently
+
+
+TYPE    : "int" | "str" | "list"
 VARIABLE: /[a-zA-Z0-9_]+/
-STRING  : /'[a-zA-Z0-9 _;&<>"-.:,]+'/
+//STRING: /'[a-zA-Z0-9 _;&<>"-.:,]+'/
+STRING  : /'[a-zA-Z0-9_ <>]+'/
 
 %import common.NUMBER
 %import common.WORD
