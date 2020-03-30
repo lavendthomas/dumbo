@@ -15,7 +15,7 @@ expression_for_0   : "for" variable_set "in" string_list "do" expressions_list "
 expression_for_1   : "for" variable_set "in" variable_get "do" expressions_list "endfor"
 expression_assign  : variable_set ":=" string_expression
                    | variable_set ":=" string_list
-                   | variable_set ":=" comparison
+                   | variable_set ":=" test
 expression_if      : "if" test "do" expressions_list "endif"
 
 string_expression: string
@@ -26,14 +26,13 @@ string_concat: string_expression "." string_expression
 string_list: "(" string_list_interior ")"
 string_list_interior: string "," string_list_interior | string
 
-test: BOOLEAN
-    | or_test
-
-or_test : and_test ("or" and_test)*
+test : and_test ("or" and_test)*        //or_test
 and_test: not_test ("and" not_test)*
-not_test: "not" not_test
+not_test: invert_test
         | comparison
-        | BOOLEAN
+        | boolean
+
+invert_test: "not" not_test
 
 comparison: arithm_expr (OPERATOR arithm_expr)*
 
@@ -55,6 +54,7 @@ OPERATOR: "="
         | "!="
 
 integer : NUMBER
+boolean : BOOLEAN
 
 string  : STRING
 variable_get_str: VARIABLE_STR
@@ -62,7 +62,7 @@ variable_get: VARIABLE      // We handle these two variable uses
 variable_set: TYPE VARIABLE      // differently
 
 
-TYPE    : "int" | "str" | "list"
+TYPE    : "int" | "str" | "list" | "bool"
 
 VARIABLE_STR: /[a-zA-Z0-9_]+/
 VARIABLE    : /[a-zA-Z0-9_]+/

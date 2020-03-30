@@ -244,6 +244,21 @@ class Interpreter(Transformer):
                     op = lambda a, b: a != b
         return int(result)
 
+    def boolean(self, args):
+        print(args)
+        return args
+
+    def not_test(self, args):
+        print(args)
+        return args
+
+    def invert_test(self, args):
+        print(args)
+        return args
+
+    def test(self, args):
+        print(args)
+        return args
 
 
 
@@ -262,9 +277,11 @@ if __name__ == '__main__':
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
-            #tree = Lark(text, start='programme').parse(f.read())
-            #print(tree)
-            #continue
-            tree = interpreter.parse(f.read())
-            # programme(variables, tree)
-            print(tree)
+            if True:
+                tree = Lark(text, start='programme', parser="lalr").parse(f.read())
+                print(tree)
+                print(tree.pretty())
+            else:
+                tree = interpreter.parse(f.read())
+                # programme(variables, tree)
+                print(tree)
