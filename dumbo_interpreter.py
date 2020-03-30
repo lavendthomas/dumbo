@@ -168,6 +168,22 @@ class Interpreter(Transformer):
     def expression_assign(self, args):
         key = args[0]
         value = args[1]
+
+        # Assignment checks
+        if key.type() == "int":
+            if not isinstance(value, int):
+                raise ValueError("Variable '" + key.get() + "' expexted an int, got a " + str(type(value)))
+        if key.type() == "str":
+            if not isinstance(value, str):
+                raise ValueError("Variable '" + key.get() + "' expexted a str, got a " + str(type(value)))
+        if key.type() == "list":
+            if not isinstance(value, list):
+                raise ValueError("Variable '" + key.get() + "' expexted a list, got a " + str(type(value)))
+        if key.type() == "bool":
+            if not isinstance(value, int):
+                raise ValueError("Variable '" + key.get() + "' expexted an int, got a " + str(type(value)))
+
+        # Add to variables
         self.variables.add(key, value)
         return None
 
