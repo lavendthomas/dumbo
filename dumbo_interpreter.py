@@ -138,6 +138,8 @@ class Interpreter(Transformer):
         token = arg[0]
         if isinstance(token, str):    # if concat or string
             return token
+        if isinstance(token, int):    # if an arithmetic expression or a test
+            return str(token)
         if isinstance(token, list):   # if a list variable is used as a parameter
             return str(token)
         if token.type == "VARIABLE":
@@ -167,7 +169,6 @@ class Interpreter(Transformer):
         key = args[0]
         value = args[1]
         self.variables.add(key, value)
-        print(self.variables._local)
         return None
 
     def string_list(self, args):
@@ -248,21 +249,17 @@ class Interpreter(Transformer):
                     op = lambda a, b: a != b
         return int(result)
 
-    def boolean(self, args):
-        print(args)
-        return args
+    def not_test(self, args) -> int:
+        return args[0]
 
-    def not_test(self, args):
-        print(args)
-        return args
+    def invert_test(self, args) -> int:
+        return int(not(args[0]))
 
-    def invert_test(self, args):
-        print(args)
-        return args
+    def and_test(self, args) -> int:
+        return reduce(lambda a, b: a and b, args[1:], args[0])
 
-    def test(self, args):
-        print(args)
-        return args
+    def test(self, args) -> int:
+        return reduce(lambda a, b: a or b, args[1:], args[0])
 
 
 
