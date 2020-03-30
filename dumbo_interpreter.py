@@ -118,6 +118,9 @@ class Interpreter(Transformer):
         variable_name = variable[0].value
         return self.variables.get(variable_name)
 
+    def variable_get_str(self, variable) -> Variable:
+        return self.variable_get(variable)
+
 
     def variable_set(self, variable) -> Variable:
         """
@@ -146,10 +149,21 @@ class Interpreter(Transformer):
         print(args[0])
         return None
 
+    def expression_print_b(self, args):
+        """
+        Prints the argument on the screen but treats integers as booleans
+        :param args:
+        :return:
+        """
+        if isinstance(args[0], int):
+            print(args[0] == 0)    # print bool : 0 => False; 1/Other => True
+        return self.expression_print()
+
     def expression_assign(self, args):
         key = args[0]
         value = args[1]
         self.variables.add(key, value)
+        print(self.variables._local)
         return None
 
     def string_list(self, args):
@@ -161,6 +175,77 @@ class Interpreter(Transformer):
             return [args[0]]
         elif len(args) == 2:
             return [args[0]] + args[1]
+
+    def integer(self, args):
+        try:
+            val = int(args[0].value)
+        except ValueError:
+            raise ValueError("Could not convert " + val + "to <class 'int'>")
+        return val    # return the value stored in the leaf
+
+    def factor(self, args):
+        if not isinstance(args[0], int):        # TODO and for variables ?
+            raise ValueError("Expected an <class 'int'> variable, got a " + str(type(args[0])) + ".")
+        return args[0]
+
+    def term(self, args):
+        product = 1
+        op = lambda a, b: a*b
+        for i, elem in enumerate(args):
+            if i % 2 == 0:
+                try:
+                    product = op(product, elem)
+                except ZeroDivisionError:
+                    raise ZeroDivisionError
+            else:
+                if elem == "*":
+                    op = lambda a, b: a*b
+                elif elem == "/":
+                    op = lambda a, b: int(a/b)  # TODO  round ?
+        return product
+
+    def arithm_expr(self, args):
+        sum_ = 0
+        op = lambda a, b: a + b
+        for i, elem in enumerate(args):
+            if i % 2 == 0:
+                sum_ = op(sum_, elem)
+            else:
+                if elem == "+":
+                    op = lambda a, b: a + b
+                elif elem == "-":
+                    op = lambda a, b: a - b
+        return sum_
+
+    def comparison(self, args) -> int:
+        if len(args) == 1:
+            return args[0]      # args is an integer
+        result = True
+        last = None
+        op = lambda a, b: a != b
+        for i, elem in enumerate(args):
+            if i % 2 == 0:
+                result = result and op(last, elem)
+                last = elem
+                if not result:      # lasy evaluation
+                    break
+            else:
+                if elem == "=":
+                    op = lambda a, b: a == b
+                elif elem == ">":
+                    op = lambda a, b: a > b
+                elif elem == ">=":
+                    op = lambda a, b: a >= b
+                elif elem == "<":
+                    op = lambda a, b: a < b
+                elif elem == "<=":
+                    op = lambda a, b: a <= b
+                elif elem == "!=":
+                    op = lambda a, b: a != b
+        return int(result)
+
+
+
 
 
 if __name__ == '__main__':
@@ -177,8 +262,7 @@ if __name__ == '__main__':
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
-            #tree = Lark(text, start='programme')\
-            #    .parse(f.read())
+            #tree = Lark(text, start='programme').parse(f.read())
             #print(tree)
             #continue
             tree = interpreter.parse(f.read())
