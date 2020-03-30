@@ -114,8 +114,12 @@ class Interpreter(Transformer):
         val = string[0].value
         return val[1:len(val)-1]        # remove surrounding quotes
 
-    def variable_get(self, variable) -> Variable:
+    def variable_get(self, variable) -> Union[int, Variable]:
         variable_name = variable[0].value
+        if variable_name == "true":
+            return 1
+        if variable_name == "false":
+            return 0
         return self.variables.get(variable_name)
 
     def variable_get_str(self, variable) -> Variable:
@@ -176,7 +180,7 @@ class Interpreter(Transformer):
         elif len(args) == 2:
             return [args[0]] + args[1]
 
-    def integer(self, args):
+    def integer(self, args) -> int:
         try:
             val = int(args[0].value)
         except ValueError:
@@ -188,7 +192,7 @@ class Interpreter(Transformer):
             raise ValueError("Expected an <class 'int'> variable, got a " + str(type(args[0])) + ".")
         return args[0]
 
-    def term(self, args):
+    def term(self, args) -> int:
         product = 1
         op = lambda a, b: a*b
         for i, elem in enumerate(args):
@@ -204,7 +208,7 @@ class Interpreter(Transformer):
                     op = lambda a, b: int(a/b)  # TODO  round ?
         return product
 
-    def arithm_expr(self, args):
+    def arithm_expr(self, args) -> int:
         sum_ = 0
         op = lambda a, b: a + b
         for i, elem in enumerate(args):
@@ -277,7 +281,7 @@ if __name__ == '__main__':
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
-            if True:
+            if False:
                 tree = Lark(text, start='programme', parser="lalr").parse(f.read())
                 print(tree)
                 print(tree.pretty())
