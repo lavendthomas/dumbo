@@ -2,7 +2,7 @@ import os
 import sys
 from typing import Union
 
-from lark import Lark, tree, Transformer
+from lark import Lark, tree, Transformer, v_args
 from lark.lexer import Token
 
 from functools import reduce
@@ -85,7 +85,7 @@ class Context:
                 return None
             else:
                 return self._next.get(key)
-        return val
+        return val[1]
 
     def pop_scope(self):
         return self._next
@@ -112,6 +112,9 @@ class Interpreter(Transformer):
     def dumbo_bloc(self, args):
         self.variables = self.variables.push_scope()
         return args
+
+    def expressions_list(self, args):
+        return lambda: args
 
     def string(self, string) -> str:
         val = string[0].value
@@ -170,7 +173,24 @@ class Interpreter(Transformer):
 
     def expression_for_0(self, args):
         print(args)
-        return args
+        init_variable_type = args[0].type()
+        init_variable_name = args[0].get()
+
+        if init_variable_type != "str":
+            raise ValueError(init_variable_name + " must be a str.")
+
+        for item_in_list in args[1]:
+            # Init
+            self.variables = self.variables.push_scope()
+            self.variables.add(args[0], item_in_list)
+
+            # Execute nested block
+            # self.expressions_list()
+
+            # Delete local variables
+            self.variables = self.variables.pop_scope()
+
+        return None
 
     def expression_assign(self, args):
         key = args[0]
