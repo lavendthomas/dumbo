@@ -47,22 +47,22 @@ class Context:
     # _name: Context
 
     def __init__(self):
-        self._local = dict()    # key: Variable -> Union[str, int, bool, list]
+        self._local = dict()    # str -> (type, value)
         self._next = None
 
     def add(self, key: Variable, value: Union[str, int, bool, list]):
-        self._local[key] = value
+        self._local[key.get()] = (key.type(), value)
 
-    def typeof(self, name: str):
-        for var in self._local.keys():
-            if var == name:
-                return var.type()
+    def typeof(self, name: str) -> str:
+        if name in self._local:
+            return self._local[name][0]
+
         if self._next is not None:
             return self._next.typeof(name)
         return False
 
     def update(self, key: Variable, new_value: Union[str, int, bool, list]):
-        val = self._local[key]
+        val = self._local[key.get()][1]
 
         if val is None:
             if self._next is None:
@@ -71,11 +71,14 @@ class Context:
                 self._next.update(key, new_value)
                 return True
 
-        self._local[key] = new_value
+        self._local[key.get()] = (key.type(), new_value)
         return True
 
-    def get(self, key: Variable):
-        val = self._local[key]
+    def get(self, key: Union[Variable, str]) -> Union[str, int, bool, list]:
+        if isinstance(key, Variable):
+            val = self._local[key.get()]
+        elif isinstance(key, str):
+            val = self._local[key]
 
         if val is None:
             if self._next is None:
@@ -164,6 +167,10 @@ class Interpreter(Transformer):
         if isinstance(args[0], int):
             print(args[0] == 0)    # print bool : 0 => False; 1/Other => True
         return self.expression_print()
+
+    def expression_for_0(self, args):
+        print(args)
+        return args
 
     def expression_assign(self, args):
         key = args[0]
