@@ -9,11 +9,6 @@ from lark.visitors import Interpreter, visit_children_decor
 from functools import reduce
 
 
-
-
-# TODO ajouter \n\p `a STRING et TXT
-
-
 class Variable:
 
     def __init__(self, type, name):
@@ -364,20 +359,8 @@ if __name__ == '__main__':
 
     variables = Context()
 
-    #interpreter: Lark = Lark(text,
-    #                         parser='lalr',
-    #                         start='programme',
-    #                         transformer=DumboInterpreter(context=variables))
-
-
     for file in sys.argv[1:]:
         with open(file, "r") as f:
-            if False:
-                tree = Lark(text, start='programme', parser="lalr").parse(f.read())
-                print(tree)
-                print(tree.pretty())
-            else:
-                interpreter = DumboInterpreter(variables)
-                tree = Lark(text, start='programme', parser="lalr").parse(f.read())
-                interpreter.visit(tree)
-                print(tree)
+            interpreter = DumboInterpreter(variables)
+            tree = Lark(text, start='programme', parser="lalr").parse(f.read())
+            interpreter.visit(tree)
