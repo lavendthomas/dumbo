@@ -8,6 +8,7 @@ expression: expression_print
           | expression_for_0
           | expression_for_1
           | expression_assign
+          | expression_if
 
 expression_print   : "print" string_expression
 expression_print_b : "print!" string_expression

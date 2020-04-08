@@ -52,7 +52,8 @@ class Context:
         self._next = None
 
     def add(self, key: Variable, value: Union[str, int, bool, list]):
-        self._local[key.get()] = (key.type(), value)
+        if not self.update(key, value):
+            self._local[key.get()] = (key.type(), value)
 
     def typeof(self, name: str) -> str:
         if name in self._local:
@@ -63,23 +64,30 @@ class Context:
         return False
 
     def update(self, key: Variable, new_value: Union[str, int, bool, list]):
-        val = self._local[key.get()][1]
+        """
+        Updates a value in the context, if it exists
+        :return: True if the value was changed (if it already existed in the context)
+        """
+        # Find and replace
+        if isinstance(key, Variable):
+            val = self._local.get(key.get())
+        elif isinstance(key, str):
+            val = self._local.get(key)
 
         if val is None:
             if self._next is None:
                 return False
             else:
-                self._next.update(key, new_value)
-                return True
-
-        self._local[key.get()] = (key.type(), new_value)
-        return True
+                return self._next.update(key, new_value)
+        else:
+            self._local[key.get()] = (key.type(), new_value)
+            return True
 
     def get(self, key: Union[Variable, str]) -> Union[str, int, bool, list]:
         if isinstance(key, Variable):
-            val = self._local[key.get()]
+            val = self._local.get(key.get())
         elif isinstance(key, str):
-            val = self._local[key]
+            val = self._local.get(key)
 
         if val is None:
             if self._next is None:
@@ -212,7 +220,24 @@ class DumboInterpreter(Interpreter):
             # Delete local variables
             self.variables = self.variables.pop_scope()
 
-        return None
+    def expression_for_1(self, tree: Tree):
+        self.expression_for_0(tree)
+
+
+    def expression_if(self, tree: Tree):
+        test, expressions_list = tree.children
+
+        boolean = self.visit(test)
+
+        if boolean:
+            # Add a new scope
+            self.variables = self.variables.push_scope()
+
+            # Execute block
+            self.visit(expressions_list)
+
+            # Remove local variables
+            self.variables = self.variables.pop_scope()
 
     def expression_assign(self, tree: Tree):
         key, value = self.visit_children(tree)
