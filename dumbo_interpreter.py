@@ -2,8 +2,9 @@ import os
 import sys
 from typing import Union
 
-from lark import Lark, tree, Transformer, v_args
-from lark.lexer import Token
+from lark import Lark
+from lark import tree as Tree
+from lark.visitors import Interpreter, visit_children_decor
 
 from functools import reduce
 
@@ -95,53 +96,71 @@ class Context:
         new._next = self
         return new
 
+    def merge(self, other):
+        """
+        Shallow copy of the variable of other into self
+        :param other:
+        :return:
+        """
+        self._local.update(other._local)
 
-
-class Interpreter(Transformer):
+class DumboInterpreter(Interpreter):
 
     variables: Context
 
-    def __init__(self, visit_tokens):
-        super().__init__(visit_tokens=visit_tokens)
-        self.variables = Context()
+    def __init__(self, context: Context):
+        super().__init__()
+        self.variables = context
 
-    def txt(self, text_token) -> str:
-        print(text_token[0])
-        return text_token[0]    # put the text on the tree
 
-    def dumbo_bloc(self, args):
+    def programme(self, tree: Tree):
+        self.visit_children(tree)
+
+    def txt(self, tree: Tree) -> str:
+        print(tree.children[0].value)
+
+    def dumbo_block(self, tree: Tree):
+        # Create a new variable scope for the dumbo_block
         self.variables = self.variables.push_scope()
-        return args
 
-    def expressions_list(self, args):
-        return lambda: args
+        self.visit_children(tree)
 
-    def string(self, string) -> str:
-        val = string[0].value
+        # Merge the local variables into the global variables
+        locals = self.variables
+        self.variables = self.variables.pop_scope()
+        self.variables.merge(locals)
+
+
+    def expressions_list(self, tree: Tree):
+        self.visit_children(tree)
+
+    def string(self, tree: Tree) -> str:
+        val = tree.children[0].value
         return val[1:len(val)-1]        # remove surrounding quotes
 
-    def variable_get(self, variable) -> Union[int, Variable]:
-        variable_name = variable[0].value
+    def variable_get(self, tree: Tree) -> Union[int, Variable]:
+        variables = self.visit_children(tree)
+        variable_name = variables[0].value
         if variable_name == "true":
             return 1
         if variable_name == "false":
             return 0
         return self.variables.get(variable_name)
 
-    def variable_get_str(self, variable) -> Variable:
-        return self.variable_get(variable)
+    def variable_get_str(self, tree: Tree) -> Variable:
+        return self.variable_get(tree)
 
 
-    def variable_set(self, variable) -> Variable:
+    def variable_set(self, tree: Tree) -> Variable:
         """
         :return: the name of the variable
         """
-        type = variable[0].value
-        value = variable[1].value
+        type = tree.children[0].value
+        value = tree.children[1].value
         return Variable(type, value)
 
-    def string_expression(self, arg) -> str:
-        token = arg[0]
+    def string_expression(self, tree: Tree) -> str:
+        token = self.visit_children(tree)[0]
         if isinstance(token, str):    # if concat or string
             return token
         if isinstance(token, int):    # if an arithmetic expression or a test
@@ -153,48 +172,50 @@ class Interpreter(Transformer):
         else:
             raise ValueError("Unknown string")
 
-    def string_concat(self, args) -> str:
-        return reduce(lambda a, b: a + b, args, "")
+    def string_concat(self, tree: Tree) -> str:
+        strings = self.visit_children(tree)
+        return reduce(lambda a, b: a + b, strings, "")
 
-    def expression_print(self, args):
+    def expression_print(self, tree: Tree):
         # print can use any type as a parameter, so no checks are necessary
-        print(args[0])
-        return None
+        to_print = self.visit_children(tree)
+        print(to_print[0])
 
-    def expression_print_b(self, args):
+    def expression_print_b(self, tree: Tree):
         """
         Prints the argument on the screen but treats integers as booleans
         :param args:
         :return:
         """
-        if isinstance(args[0], int):
-            print(args[0] == 0)    # print bool : 0 => False; 1/Other => True
-        return self.expression_print()
+        to_print = self.visit_children(tree)
+        if isinstance(to_print[0], int):
+            print(to_print[0] == 0)    # print bool : 0 => False; 1/Other => True
+        return self.expression_print(tree)
 
-    def expression_for_0(self, args):
-        print(args)
-        init_variable_type = args[0].type()
-        init_variable_name = args[0].get()
+    def expression_for_0(self, tree: Tree):
+        variable_set, string_list, expressions_list = tree.children
+        loop_variable: Variable = self.visit(variable_set)
 
-        if init_variable_type != "str":
-            raise ValueError(init_variable_name + " must be a str.")
+        if loop_variable.type() != "str":
+            raise ValueError(loop_variable.get() + " must be a str.")
 
-        for item_in_list in args[1]:
+        loop_content: list = self.visit(string_list)
+
+        for item_in_list in loop_content:
             # Init
             self.variables = self.variables.push_scope()
-            self.variables.add(args[0], item_in_list)
+            self.variables.add(loop_variable, item_in_list)
 
             # Execute nested block
-            # self.expressions_list()
+            self.visit(expressions_list)
 
             # Delete local variables
             self.variables = self.variables.pop_scope()
 
         return None
 
-    def expression_assign(self, args):
-        key = args[0]
-        value = args[1]
+    def expression_assign(self, tree: Tree):
+        key, value = self.visit_children(tree)
 
         # Assignment checks
         if key.type() == "int":
@@ -212,34 +233,35 @@ class Interpreter(Transformer):
 
         # Add to variables
         self.variables.add(key, value)
-        return None
 
-    def string_list(self, args):
-        return args[0]
+    def string_list(self, tree: Tree) -> list:
+        return self.visit_children(tree)[0]    # a string list can only have one string_list_interior
 
-    def string_list_interior(self, args):
-        if len(args) == 1:
+    def string_list_interior(self, tree: Tree) -> list:
+        if len(tree.children) == 1:
             # end of the list
-            return [args[0]]
-        elif len(args) == 2:
-            return [args[0]] + args[1]
+            return self.visit_children(tree)
+        elif len(tree.children) == 2:
+            return [self.visit(tree.children[0])] + self.visit(tree.children[1])
 
-    def integer(self, args) -> int:
+    def integer(self, tree: Tree) -> int:
+        terms = self.visit_children(tree)
         try:
-            val = int(args[0].value)
+            val = int(terms[0].value)
         except ValueError:
             raise ValueError("Could not convert " + val + "to <class 'int'>")
         return val    # return the value stored in the leaf
 
-    def factor(self, args):
-        if not isinstance(args[0], int):        # TODO and for variables ?
+    def factor(self, tree: Tree):
+        terms = self.visit_children(tree)
+        if not isinstance(terms[0], int):        # TODO and for variables ?
             raise ValueError("Expected an <class 'int'> variable, got a " + str(type(args[0])) + ".")
-        return args[0]
+        return terms[0]
 
-    def term(self, args) -> int:
+    def term(self, tree: Tree) -> int:
         product = 1
         op = lambda a, b: a*b
-        for i, elem in enumerate(args):
+        for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 try:
                     product = op(product, elem)
@@ -252,10 +274,10 @@ class Interpreter(Transformer):
                     op = lambda a, b: int(a/b)  # TODO  round ?
         return product
 
-    def arithm_expr(self, args) -> int:
+    def arithm_expr(self, tree: Tree) -> int:
         sum_ = 0
         op = lambda a, b: a + b
-        for i, elem in enumerate(args):
+        for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 sum_ = op(sum_, elem)
             else:
@@ -265,13 +287,13 @@ class Interpreter(Transformer):
                     op = lambda a, b: a - b
         return sum_
 
-    def comparison(self, args) -> int:
-        if len(args) == 1:
-            return args[0]      # args is an integer
+    def comparison(self, tree: Tree) -> int:
+        if len(tree.children) == 1:
+            return self.visit_children(tree)[0]      # is an integer\
         result = True
         last = None
         op = lambda a, b: a != b
-        for i, elem in enumerate(args):
+        for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 result = result and op(last, elem)
                 last = elem
@@ -292,19 +314,21 @@ class Interpreter(Transformer):
                     op = lambda a, b: a != b
         return int(result)
 
-    def not_test(self, args) -> int:
-        return args[0]
+    def not_test(self, tree: Tree) -> int:
+        term = self.visit_children(tree)
+        return term[0]
 
-    def invert_test(self, args) -> int:
-        return int(not(args[0]))
+    def invert_test(self, tree: Tree) -> int:
+        term = self.visit_children(tree)
+        return int(not(term[0]))
 
-    def and_test(self, args) -> int:
-        return reduce(lambda a, b: a and b, args[1:], args[0])
+    def and_test(self, tree: Tree) -> int:
+        terms = self.visit_children(tree)
+        return reduce(lambda a, b: a and b, terms[1:], terms[0])
 
-    def test(self, args) -> int:
-        return reduce(lambda a, b: a or b, args[1:], args[0])
-
-
+    def test(self, tree: Tree) -> int:
+        terms = self.visit_children(tree)
+        return reduce(lambda a, b: a or b, terms[1:], terms[0])
 
 
 if __name__ == '__main__':
@@ -313,11 +337,13 @@ if __name__ == '__main__':
 
     text = grammar.read()
 
+    variables = Context()
 
-    interpreter: Lark = Lark(text,
-                             parser='lalr',
-                             start='programme',
-                             transformer=Interpreter(visit_tokens=True))
+    #interpreter: Lark = Lark(text,
+    #                         parser='lalr',
+    #                         start='programme',
+    #                         transformer=DumboInterpreter(context=variables))
+
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
@@ -326,6 +352,7 @@ if __name__ == '__main__':
                 print(tree)
                 print(tree.pretty())
             else:
-                tree = interpreter.parse(f.read())
-                # programme(variables, tree)
+                interpreter = DumboInterpreter(variables)
+                tree = Lark(text, start='programme', parser="lalr").parse(f.read())
+                interpreter.visit(tree)
                 print(tree)

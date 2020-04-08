@@ -1,6 +1,6 @@
-programme: txt | txt programme | dumbo_bloc | dumbo_bloc programme
+programme: txt | txt programme | dumbo_block | dumbo_block programme
 txt: /[a-zA-Z0-9 _;&<>"-.:\\,\n]+/
-dumbo_bloc: "{{" expressions_list "}}"
+dumbo_block: "{{" expressions_list "}}"
 expressions_list: ( expression ";" expressions_list )
                 | ( expression ";" )
 
