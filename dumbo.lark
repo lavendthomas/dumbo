@@ -1,5 +1,5 @@
 programme: txt | txt programme | dumbo_block | dumbo_block programme
-txt: /[a-zA-Z0-9 _;&<>"-.:\\,\n]+/
+txt: /[ \ta-zA-Z0-9 _;&<>"-.:\\,\n]+/
 dumbo_block: "{{" expressions_list "}}"
 expressions_list: ( expression ";" expressions_list )
                 | ( expression ";" )
@@ -73,4 +73,4 @@ STRING      : /'[a-zA-Z0-9_ <>]+'/
 %import common.NUMBER
 %import common.WORD
 
-%ignore /[ \n]/
+%ignore /[ \n\t]/

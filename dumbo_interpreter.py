@@ -120,7 +120,7 @@ class DumboInterpreter(Interpreter):
         self.visit_children(tree)
 
     def txt(self, tree: Tree) -> str:
-        print(tree.children[0].value)
+        print(tree.children[0].value, end="")
 
     def dumbo_block(self, tree: Tree):
         # Create a new variable scope for the dumbo_block
@@ -182,7 +182,7 @@ class DumboInterpreter(Interpreter):
     def expression_print(self, tree: Tree):
         # print can use any type as a parameter, so no checks are necessary
         to_print = self.visit_children(tree)
-        print(to_print[0])
+        print(to_print[0], end="")
 
     def expression_print_b(self, tree: Tree):
         """
@@ -192,7 +192,7 @@ class DumboInterpreter(Interpreter):
         """
         to_print = self.visit_children(tree)
         if isinstance(to_print[0], int):
-            print(to_print[0] == 0)    # print bool : 0 => False; 1/Other => True
+            print(to_print[0] == 0, end="")    # print bool : 0 => False; 1/Other => True
         return self.expression_print(tree)
 
     def expression_for_0(self, tree: Tree):
