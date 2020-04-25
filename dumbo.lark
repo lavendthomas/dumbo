@@ -1,5 +1,5 @@
 programme: txt | txt programme | dumbo_block | dumbo_block programme
-txt: /[ \ta-zA-Z0-9 _;&<>"-.:\\,\n]+/
+txt: /[ ta-zA-Z0-9 _;&<>"-.:\/\\,\n]+/
 dumbo_block: "{{" expressions_list "}}"
 expressions_list: ( expression ";" expressions_list )
                 | ( expression ";" )
@@ -67,8 +67,7 @@ TYPE    : "int" | "str" | "list" | "bool"
 
 VARIABLE_STR: /[a-zA-Z0-9_]+/
 VARIABLE    : /[a-zA-Z0-9_]+/
-//STRING    : /'[a-zA-Z0-9 _;&<>"-.:,]+'/
-STRING      : /'[a-zA-Z0-9_ <>]+'/
+STRING      : /'[ ta-zA-Z0-9 _;&<>"-.:\/\\,\n]+'/
 
 %import common.NUMBER
 %import common.WORD
