@@ -4,7 +4,7 @@ from typing import Union
 
 from lark import Lark
 from lark import tree as Tree
-from lark.visitors import Interpreter, visit_children_decor
+from lark.visitors import Interpreter
 
 from functools import reduce
 
@@ -110,12 +110,14 @@ class Context:
 class DumboInterpreter(Interpreter):
 
     variables: Context
+    _print_buffer: str = ""
+    _has_error = False
 
     OPERATORS = {
         '+' : operator.add,
         '-' : operator.sub,
         '*' : operator.mul,
-        '/' : lambda a, b: int(a/b),     # TODO  round ?
+        '/' : operator.floordiv,
         '<' : operator.lt,
         '<=': operator.le,
         '>' : operator.gt,
@@ -124,6 +126,11 @@ class DumboInterpreter(Interpreter):
         '=' : operator.eq,
     }
 
+    def visit(self, tree, display=False):
+        res = super(DumboInterpreter, self).visit(tree)
+        if display and not self._has_error:
+            print(self._print_buffer)
+        return res
 
     def __init__(self, context: Context):
         super().__init__()
@@ -133,8 +140,8 @@ class DumboInterpreter(Interpreter):
     def programme(self, tree: Tree):
         self.visit_children(tree)
 
-    def txt(self, tree: Tree) -> str:
-        print(tree.children[0].value, end="")
+    def txt(self, tree: Tree):
+        self._print_buffer += tree.children[0].value
 
     def dumbo_block(self, tree: Tree):
         # Create a new variable scope for the dumbo_block
@@ -196,7 +203,7 @@ class DumboInterpreter(Interpreter):
     def expression_print(self, tree: Tree):
         # print can use any type as a parameter, so no checks are necessary
         to_print = self.visit_children(tree)
-        print(to_print[0], end="")
+        self._print_buffer +=  to_print[0]
 
     def expression_print_b(self, tree: Tree):
         """
@@ -206,7 +213,7 @@ class DumboInterpreter(Interpreter):
         """
         to_print = self.visit_children(tree)
         if isinstance(to_print[0], int):
-            print(to_print[0] == 0, end="")    # print bool : 0 => False; 1/Other => True
+            self._print_buffer += to_print[0] == 0    # print bool : 0 => False; 1/Other => True
         return self.expression_print(tree)
 
     def expression_for_0(self, tree: Tree):
@@ -288,8 +295,8 @@ class DumboInterpreter(Interpreter):
 
     def factor(self, tree: Tree):
         terms = self.visit_children(tree)
-        if not isinstance(terms[0], int):        # TODO and for variables ?
-            raise ValueError("Expected an <class 'int'> variable, got a " + str(type(args[0])) + ".")
+        if not isinstance(terms[0], int):
+            raise ValueError("Expected an <class 'int'> variable, got a " + str(type(terms[0])) + ".")
         return terms[0]
 
     def term(self, tree: Tree) -> int:
@@ -350,11 +357,11 @@ class DumboInterpreter(Interpreter):
 
     def and_test(self, tree: Tree) -> int:
         terms = self.visit_children(tree)
-        return reduce(lambda a, b: a and b, terms[1:], terms[0])
+        return reduce(operator.and_, terms[1:], terms[0])
 
     def test(self, tree: Tree) -> int:
         terms = self.visit_children(tree)
-        return reduce(lambda a, b: a or b, terms[1:], terms[0])
+        return reduce(operator.or_, terms[1:], terms[0])
 
 
 if __name__ == '__main__':
@@ -369,4 +376,8 @@ if __name__ == '__main__':
         with open(file, "r") as f:
             interpreter = DumboInterpreter(variables)
             tree = Lark(text, start='programme', parser="lalr").parse(f.read())
-            interpreter.visit(tree)
+            try:
+                interpreter.visit(tree, display=True)
+            except Exception as e:
+                raise e
+                print(e, file=sys.stderr)
