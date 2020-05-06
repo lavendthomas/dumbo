@@ -1,4 +1,4 @@
-import os
+import operator
 import sys
 from typing import Union
 
@@ -110,6 +110,20 @@ class Context:
 class DumboInterpreter(Interpreter):
 
     variables: Context
+
+    OPERATORS = {
+        '+' : operator.add,
+        '-' : operator.sub,
+        '*' : operator.mul,
+        '/' : lambda a, b: int(a/b),     # TODO  round ?
+        '<' : operator.lt,
+        '<=': operator.le,
+        '>' : operator.gt,
+        '>=': operator.ge,
+        '!=': operator.ne,
+        '=' : operator.eq,
+    }
+
 
     def __init__(self, context: Context):
         super().__init__()
@@ -280,7 +294,7 @@ class DumboInterpreter(Interpreter):
 
     def term(self, tree: Tree) -> int:
         product = 1
-        op = lambda a, b: a*b
+        op = self.OPERATORS["*"]
         for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 try:
@@ -288,23 +302,23 @@ class DumboInterpreter(Interpreter):
                 except ZeroDivisionError:
                     raise ZeroDivisionError
             else:
-                if elem == "*":
-                    op = lambda a, b: a*b
-                elif elem == "/":
-                    op = lambda a, b: int(a/b)  # TODO  round ?
+                try:
+                    op = self.OPERATORS[elem]
+                except KeyError:
+                    raise ValueError("Could not find operation for '" + elem + "', excpected * or /")
         return product
 
     def arithm_expr(self, tree: Tree) -> int:
         sum_ = 0
-        op = lambda a, b: a + b
+        op = self.OPERATORS["+"]
         for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 sum_ = op(sum_, elem)
             else:
-                if elem == "+":
-                    op = lambda a, b: a + b
-                elif elem == "-":
-                    op = lambda a, b: a - b
+                try:
+                    op = self.OPERATORS[elem]
+                except KeyError:
+                    raise ValueError("Could not find operation for '" + elem + "', excpected + or -")
         return sum_
 
     def comparison(self, tree: Tree) -> int:
@@ -312,26 +326,18 @@ class DumboInterpreter(Interpreter):
             return self.visit_children(tree)[0]      # is an integer\
         result = True
         last = None
-        op = lambda a, b: a != b
+        op = self.OPERATORS['!=']
         for i, elem in enumerate(self.visit_children(tree)):
             if i % 2 == 0:
                 result = result and op(last, elem)
                 last = elem
-                if not result:      # lasy evaluation
+                if not result:      # lazy evaluation
                     break
             else:
-                if elem == "=":
-                    op = lambda a, b: a == b
-                elif elem == ">":
-                    op = lambda a, b: a > b
-                elif elem == ">=":
-                    op = lambda a, b: a >= b
-                elif elem == "<":
-                    op = lambda a, b: a < b
-                elif elem == "<=":
-                    op = lambda a, b: a <= b
-                elif elem == "!=":
-                    op = lambda a, b: a != b
+                try:
+                    op = self.OPERATORS[elem]
+                except KeyError:
+                    raise ValueError("Could not find operation for '" + elem + "'")
         return int(result)
 
     def not_test(self, tree: Tree) -> int:
