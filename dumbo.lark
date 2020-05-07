@@ -1,6 +1,7 @@
 programme: txt | txt programme | dumbo_block | dumbo_block programme
 txt: /[ ta-zA-Z0-9 _;&<>"-.:\/\\,\n\s]+/
-dumbo_block: "{{" expressions_list "}}"
+dumbo_block: ( "{{" "}}" )
+           | ( "{{" expressions_list "}}" )
 expressions_list: ( expression ";" expressions_list )
                 | ( expression ";" )
 
