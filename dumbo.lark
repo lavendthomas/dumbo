@@ -55,13 +55,13 @@ OPERATOR: "="
         | ">="
         | "!="
 
-integer : NUMBER
+integer : SIGNED_INT
 boolean : BOOLEAN
 
 string  : STRING
 variable_get_str: VARIABLE_STR
-variable_get: VARIABLE      // We handle these two variable uses
-variable_set: TYPE VARIABLE      // differently
+variable_get: VARIABLE              // We handle these two variable uses
+variable_set: TYPE VARIABLE         // differently
 
 
 TYPE    : "int" | "str" | "list" | "bool"
@@ -70,7 +70,6 @@ VARIABLE_STR: /[a-zA-Z0-9_]+/
 VARIABLE    : /[a-zA-Z0-9_]+/
 STRING      : /'[^']+'/
 
-%import common.NUMBER
-%import common.WORD
+%import common.SIGNED_INT
 
 %ignore /[ \n\t]/
