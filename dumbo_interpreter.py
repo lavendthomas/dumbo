@@ -143,8 +143,8 @@ class DumboInterpreter(Interpreter):
 
     def visit(self, tree, display=False):
         res = super(DumboInterpreter, self).visit(tree)
-        if display and not self._has_error:
-            print(self._print_buffer)
+        if display and not self._has_error and self._print_buffer != "\n":
+            print(self._print_buffer, end="")
         return res
 
     def __init__(self, context: Context):
@@ -221,7 +221,7 @@ class DumboInterpreter(Interpreter):
     def expression_print(self, tree: Tree):
         # print can use any type as a parameter, so no checks are necessary
         to_print = self.visit_children(tree)
-        self._print_buffer +=  to_print[0]
+        self._print_buffer += to_print[0]
 
     def expression_print_b(self, tree: Tree):
         """
