@@ -2,12 +2,13 @@ import operator
 import sys
 from typing import Union
 
-from lark import Lark
+from lark import Lark, UnexpectedToken
 from lark import tree as Tree
 from lark.visitors import Interpreter
 
 from functools import reduce
 
+interpreted_file: str = ""
 
 class Variable:
 
@@ -107,6 +108,20 @@ class Context:
         """
         self._local.update(other._local)
 
+class InterpreterError(Exception):
+
+    def __init__(self, source: Tree, message: str):
+        super(InterpreterError, self).__init__(
+            interpreted_file + " " +
+            self._get_line_number(source) +
+            ": " + message
+        )
+
+    def _get_line_number(self, source: Tree) -> str :
+        return "l" + str(source.line) + " c" + str(source.column) + \
+               " -> l" + str(source.end_line) + " c" + str(source.end_column)
+
+
 class DumboInterpreter(Interpreter):
 
     variables: Context
@@ -169,7 +184,10 @@ class DumboInterpreter(Interpreter):
             return 1
         if variable_name == "false":
             return 0
-        return self.variables.get(variable_name)
+        res = self.variables.get(variable_name)
+        if res is None:
+            raise InterpreterError(tree, "'" + variable_name + "' is not instantiated.")
+        return res
 
     def variable_get_str(self, tree: Tree) -> Variable:
         return self.variable_get(tree)
@@ -194,7 +212,7 @@ class DumboInterpreter(Interpreter):
         if token.type == "VARIABLE":
             return self.variables.get(token)         # TODO Afficher un message d'erreur si variable inconnue
         else:
-            raise ValueError("Unknown string")
+            raise InterpreterError(tree, "Unknown string type.")
 
     def string_concat(self, tree: Tree) -> str:
         strings = self.visit_children(tree)
@@ -221,7 +239,7 @@ class DumboInterpreter(Interpreter):
         loop_variable: Variable = self.visit(variable_set)
 
         if loop_variable.type() != "str":
-            raise ValueError(loop_variable.get() + " must be a str.")
+            raise InterpreterError(tree, loop_variable.get() + " must be a str.")
 
         loop_content: list = self.visit(string_list)
 
@@ -261,16 +279,16 @@ class DumboInterpreter(Interpreter):
         # Assignment checks
         if key.type() == "int":
             if not isinstance(value, int):
-                raise ValueError("Variable '" + key.get() + "' expexted an int, got a " + str(type(value)))
+                raise InterpreterError(tree, "Variable '" + key.get() + "' expected an int, got a " + str(type(value)) + ".")
         if key.type() == "str":
             if not isinstance(value, str):
-                raise ValueError("Variable '" + key.get() + "' expexted a str, got a " + str(type(value)))
+                raise InterpreterError(tree, "Variable '" + key.get() + "' expected a str, got a " + str(type(value)) + ".")
         if key.type() == "list":
             if not isinstance(value, list):
-                raise ValueError("Variable '" + key.get() + "' expexted a list, got a " + str(type(value)))
+                raise InterpreterError(tree, "Variable '" + key.get() + "' expected a list, got a " + str(type(value)) + ".")
         if key.type() == "bool":
             if not isinstance(value, int):
-                raise ValueError("Variable '" + key.get() + "' expexted an int, got a " + str(type(value)))
+                raise InterpreterError(tree, "Variable '" + key.get() + "' expected an int, got a " + str(type(value)) + ".")
 
         # Add to variables
         self.variables.add(key, value)
@@ -290,13 +308,13 @@ class DumboInterpreter(Interpreter):
         try:
             val = int(terms[0].value)
         except ValueError:
-            raise ValueError("Could not convert " + val + "to <class 'int'>")
+            raise InterpreterError(tree, "Could not convert " + val + "to <class 'int'>.")
         return val    # return the value stored in the leaf
 
     def factor(self, tree: Tree):
         terms = self.visit_children(tree)
         if not isinstance(terms[0], int):
-            raise ValueError("Expected an <class 'int'> variable, got a " + str(type(terms[0])) + ".")
+            raise InterpreterError(tree, "Expected a <class 'int'> variable, got a " + str(type(terms[0])) + ".")
         return terms[0]
 
     def term(self, tree: Tree) -> int:
@@ -307,12 +325,12 @@ class DumboInterpreter(Interpreter):
                 try:
                     product = op(product, elem)
                 except ZeroDivisionError:
-                    raise ZeroDivisionError
+                    raise InterpreterError(tree, "Division by zero.")
             else:
                 try:
                     op = self.OPERATORS[elem]
                 except KeyError:
-                    raise ValueError("Could not find operation for '" + elem + "', excpected * or /")
+                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', excpected * or /.")
         return product
 
     def arithm_expr(self, tree: Tree) -> int:
@@ -325,7 +343,7 @@ class DumboInterpreter(Interpreter):
                 try:
                     op = self.OPERATORS[elem]
                 except KeyError:
-                    raise ValueError("Could not find operation for '" + elem + "', excpected + or -")
+                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', excpected + or -")
         return sum_
 
     def comparison(self, tree: Tree) -> int:
@@ -344,7 +362,7 @@ class DumboInterpreter(Interpreter):
                 try:
                     op = self.OPERATORS[elem]
                 except KeyError:
-                    raise ValueError("Could not find operation for '" + elem + "'")
+                    raise InterpreterError(tree, "Could not find operation for '" + elem + "'.")
         return int(result)
 
     def not_test(self, tree: Tree) -> int:
@@ -374,10 +392,15 @@ if __name__ == '__main__':
 
     for file in sys.argv[1:]:
         with open(file, "r") as f:
+            interpreted_file = file
             interpreter = DumboInterpreter(variables)
-            tree = Lark(text, start='programme', parser="lalr").parse(f.read())
             try:
+                tree = Lark(text, start='programme', parser="lalr", propagate_positions=True).parse(f.read())
                 interpreter.visit(tree, display=True)
-            except Exception as e:
-                raise e
+            except UnexpectedToken as e:
+                print("Error parsing " + interpreted_file + ":", file=sys.stderr)
                 print(e, file=sys.stderr)
+                exit(2)
+            except InterpreterError as e:
+                print(e, file=sys.stderr)
+                exit(1)
