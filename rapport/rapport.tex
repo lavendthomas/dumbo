@@ -1,0 +1,118 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[francais]{babel}
+\usepackage[pdftex]{graphicx}
+
+\begin{document}
+\begin{titlepage}
+\begin{center}
+
+{\Large Université de Mons}\\[1ex]
+{\Large Faculté des sciences}\\[1ex]
+{\Large Département d'Informatique}\\[2.5cm]
+
+\newcommand{\HRule}{\rule{\linewidth}{0.3mm}}
+% Title
+\HRule \\[0.3cm]
+{ \LARGE \bfseries Compilation : interpréteur Dumbo \\[0.3cm]}
+{ \LARGE \bfseries Rapport de projet \\[0.1cm]} % Commenter si pas besoin
+\HRule \\[1.5cm]
+
+% Author and supervisor
+\begin{minipage}[t]{0.45\textwidth}
+\begin{flushleft} \large
+\emph{Professeur:}\\
+Véronique \textsc{Bruyère}\\
+Alexandre \textsc{Decan}
+\end{flushleft}
+\end{minipage}
+\begin{minipage}[t]{0.45\textwidth}
+\begin{flushright} \large
+\emph{Auteur:} \\
+Thomas \textsc{Lavend'Homme}\\
+Guillaume \textsc{Proot}
+\end{flushright}
+\end{minipage}\\[2ex]
+
+\vfill
+
+% Bottom of the page
+\begin{center}
+\begin{tabular}[t]{c c c}
+\includegraphics[height=1.5cm]{logoumons.jpg} &
+\hspace{0.3cm} &
+\includegraphics[height=1.5cm]{logofs.jpg}
+\end{tabular}
+\end{center}~\\
+ 
+{\large Année académique 2019-2020}
+
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+L'objectif de ce projet est de nous familiariser avec le fonctionnement d'un compilateur et pour celà il nous a été demandé d'en réalisé un en python interpretant du code \textit{dumbo}.
+
+\section{Mode d'emploi}
+
+Pour faire fonctionner notre compilateur, il vous est demandé de vous placer dans le répertoire où se trouve le fichier \textit{dumbo$\_$interpreter.py} ainsi que vos fichiers à interpréter. Ensuite, dans l'invite de commande, rentrez la commande suivante : \textit{python3 dumbo$\_$interpreter.py data template output}.
+
+\section{Grammaire}
+
+Pour ce projet, nous avons utilisé la grammaire de base du langage dumbo à laquelle nous avons apporté quelques modifications et ajouts : \begin{itemize}
+	\item[-] Tout d'abord nous avons ajouté la règle : $dumbo\_block: ( "\{\{"\ \ "\}\}" )$ pour pouvoir gérer les cas où nous aurions affaire à un dumbo$\_$block vide.
+	\item[-] Nous avons géré les différentes expressions individuelement afin de limiter les erreurs et simplifier la clarté du code. Pour ce qui est des expressions "print" nous l'avons séparée en deux cas distinct :\begin{itemize}
+		\item[$\bullet$] \textbf{print} affichera ce qui est attendu sans check supplémentaire. (Exemple : print 4 $\Rightarrow$ 4)
+		\item[$\bullet$] \textbf{print!} affichera ce qui est attendu exepté que les entiers deviendront des booléens. ( 0 $\Rightarrow$ False et le reste $\Rightarrow$ True). (Exemple : print! 4 $\Rightarrow$ True)	
+	\end{itemize}
+	\item[-] Afin de gérer l'expression “if $<$ boolean $>$ do $<$ expressions list $>$ endif”, nous avons ajouté l'assignation d'un booléen à une variable.
+	\item[-] En plus de la grammaire de base de dumbo nous avons ajouté la possibilité de faire des opérations logiques (AND, OR, NOT, TRUE, FALSE) ainsi que des comparaisons logiques et arithmétiques ($ =, <, >, <=, >=, !=$).
+	\item[-] Dans la grammaire de base de dumbo, il n'y a pas de distinctions entre l'instanciation de variable et l'appel de celle-ci. C'est pourquoi, nous avons décidé de séparer celà en en fonctions différentes $\textit{variable\_set}$ et $\textit{variable\_get}$. Tel les set et get dans d'autres langages de programmation $\textit{variable\_get}$ ne fonctionnera que si la variable sur laquelle la fonction est appliquée existe déjà alors que $\textit{variable\_set}$ n'impose pas cette contrainte.
+	\item[-] Enfin, nous demandons pour instancier une variable d'y ajouter son type (exemple : int x = 4)
+\end{itemize}
+
+\section{Gestion d'expression}
+
+\subsection{Gestion des variables locales et globales}
+Pour gérer les variables, nous avons décidé d'utiliser une liste chainée de dictionnaire où chaque maillon est un scope. Quand on détecte un nouveau dumbo bloc, nous créons un nouveau scope, on visite ensuite le bloc en insérent toutes les variables de ce bloc dans le scope nouvelement créé et lorsque le parcours du dumbo bloc est finis nous refusionnons le scope avec les variables globales.
+
+\subsection{Gestion du for}
+
+Nous gérons les boucles for de la manière suivantes :\begin{enumerate}
+\item Tout d'abord nous créons une variable locale (loop$\_$variable). Nous l'assignons à la valeur correspondante dans la string$\_$list ou par rapport à la variable donnée dans un nouveau scope.
+\item On exécute le dumbo bloc à l'intérieur de la boucle.
+\item On efface la variable locale et on recommence l'opérationtant qu'il y a des éléments dans la string$\_$list.
+\end{enumerate}
+\subsection{Gestion du if}
+Nous avons décidé de gérer les if de la manière suivante : \begin{enumerate}
+\item On teste si la condition est vraie.
+\item Si celle-ci est vérifiée, on crée un nouveau scope.
+\item On exécute le dumbo bloc.
+\item On supprime les variables locales.
+\end{enumerate}
+
+\section{choix personnel}
+
+Nous avons décidé d'utiliser la librairie LARK à la place de PLY car malgré le fait que nous ne l'ayons pas aborder en tp nous la trouvions plus adaptée pour la réalisation de notre projet.\\
+\\
+Il n'y a pas de booleen à la base avec notre compilateur. Quand nous gérons une condition logique, nous considérons $ 0 \Rightarrow False$ et $ (int \neq 0) \Rightarrow True$.\\
+\\
+Nous avons aussi choisi d'imposer un typage aux variables du fichier d'entrée. Cela nous permet de gérer plus facilement les erreurs de type lors de la compilation.
+
+\section{Problème survenus}
+
+Un problème que nous avons rencontré est la gestion de la boucle for. En effet, nous utilisions un "Transformer" de Lark qui fonctionne en bottom-up ce qui entrainait que l'on parcourait d'abord l'intérieur de la boucle avant l'expression en elle-même. Pour résoudre celà, nous avons revu notre implémentation en utilisant la classe "Interpreter" de Lark à la place de "Transformer" qui elle utilise une approche top-down.
+\\
+\\
+
+
+
+\section{Conclusion}
+
+Ce projet nous auras permis de mieux nous familiariser avec le processus de compilation et différents outils facilitant celui-ci. Si nous devions emettre une critique concernant notre projet, ça serait sur notre gestion des types. En effet, celle-ci est loin d'être vraiment optimisée.
+\end{document}
