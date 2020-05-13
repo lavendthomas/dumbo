@@ -6,6 +6,7 @@ expressions_list: ( expression ";" expressions_list )
                 | ( expression ";" )
 
 expression: expression_print
+          | expression_print_b
           | expression_for_0
           | expression_for_1
           | expression_assign

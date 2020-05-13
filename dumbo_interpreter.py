@@ -221,7 +221,7 @@ class DumboInterpreter(Interpreter):
     def expression_print(self, tree: Tree):
         # print can use any type as a parameter, so no checks are necessary
         to_print = self.visit_children(tree)
-        self._print_buffer += to_print[0]
+        self._print_buffer += str(to_print[0])
 
     def expression_print_b(self, tree: Tree):
         """
@@ -230,8 +230,9 @@ class DumboInterpreter(Interpreter):
         :return:
         """
         to_print = self.visit_children(tree)
-        if isinstance(to_print[0], int):
-            self._print_buffer += to_print[0] == 0    # print bool : 0 => False; 1/Other => True
+        if to_print[0].isdigit():
+            self._print_buffer += str(to_print[0] == 0).lower()     # print bool : 0 => False; 1/Other => True
+            return
         return self.expression_print(tree)
 
     def expression_for_0(self, tree: Tree):
@@ -402,5 +403,6 @@ if __name__ == '__main__':
                 print(e, file=sys.stderr)
                 exit(2)
             except InterpreterError as e:
+                #raise e
                 print(e, file=sys.stderr)
                 exit(1)
