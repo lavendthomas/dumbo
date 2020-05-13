@@ -231,7 +231,7 @@ class DumboInterpreter(Interpreter):
         """
         to_print = self.visit_children(tree)
         if to_print[0].isdigit():
-            self._print_buffer += str(to_print[0] == 0).lower()     # print bool : 0 => False; 1/Other => True
+            self._print_buffer += str(int(to_print[0]) != 0).lower()     # print bool : 0 => False; 1/Other => True
             return
         return self.expression_print(tree)
 
@@ -331,7 +331,7 @@ class DumboInterpreter(Interpreter):
                 try:
                     op = self.OPERATORS[elem]
                 except KeyError:
-                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', excpected * or /.")
+                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', expected * or /.")
         return product
 
     def arithm_expr(self, tree: Tree) -> int:
@@ -344,7 +344,7 @@ class DumboInterpreter(Interpreter):
                 try:
                     op = self.OPERATORS[elem]
                 except KeyError:
-                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', excpected + or -")
+                    raise InterpreterError(tree, "Could not find operation for '" + elem + "', expected + or -")
         return sum_
 
     def comparison(self, tree: Tree) -> int:
@@ -403,6 +403,5 @@ if __name__ == '__main__':
                 print(e, file=sys.stderr)
                 exit(2)
             except InterpreterError as e:
-                #raise e
                 print(e, file=sys.stderr)
                 exit(1)
