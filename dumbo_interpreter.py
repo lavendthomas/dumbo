@@ -118,8 +118,7 @@ class InterpreterError(Exception):
         )
 
     def _get_line_number(self, source: Tree) -> str :
-        return "l" + str(source.line) + " c" + str(source.column) + \
-               " -> l" + str(source.end_line) + " c" + str(source.end_column)
+        return "(ligne " + str(source.line) + ", column " + str(source.column) + ")"
 
 
 class DumboInterpreter(Interpreter):
@@ -144,7 +143,7 @@ class DumboInterpreter(Interpreter):
     def visit(self, tree, display=False):
         res = super(DumboInterpreter, self).visit(tree)
         if display and not self._has_error and self._print_buffer != "\n":
-            print(self._print_buffer, end="")
+            return self._print_buffer
         return res
 
     def __init__(self, context: Context):
@@ -245,7 +244,7 @@ class DumboInterpreter(Interpreter):
         loop_content: list = self.visit(string_list)
 
         for item_in_list in loop_content:
-            # Init
+            # Create new scope and add loop variable to it
             self.variables = self.variables.push_scope()
             self.variables.add(loop_variable, item_in_list)
 
@@ -397,7 +396,9 @@ if __name__ == '__main__':
             interpreter = DumboInterpreter(variables)
             try:
                 tree = Lark(text, start='programme', parser="lalr", propagate_positions=True).parse(f.read())
-                interpreter.visit(tree, display=True)
+                result = interpreter.visit(tree, display=True)
+                if result is not None:
+                    print(result, end="")
             except UnexpectedToken as e:
                 print("Error parsing " + interpreted_file + ":", file=sys.stderr)
                 print(e, file=sys.stderr)
