@@ -56,37 +56,37 @@ Guillaume \textsc{Proot}
 
 \section{Introduction}
 
-L'objectif de ce projet est de nous familiariser avec le fonctionnement d'un compilateur et pour celà il nous a été demandé d'en réalisé un en python interpretant du code \textit{dumbo}.
+L'objectif de ce projet est de nous familiariser avec le fonctionnement d'un interpréteur et pour cela il nous a été demandé d'en réalisé un en python interprétant du code \textit{dumbo}.
 
 \section{Mode d'emploi}
 
-Pour faire fonctionner notre compilateur, il vous est demandé de vous placer dans le répertoire où se trouve le fichier \textit{dumbo$\_$interpreter.py} ainsi que vos fichiers à interpréter. Ensuite, dans l'invite de commande, rentrez la commande suivante : \textit{python3 dumbo$\_$interpreter.py data template output}.
+Pour faire fonctionner notre interpréteur, il vous est demandé de vous placer dans le répertoire où se trouve le fichier \textit{dumbo$\_$interpreter.py} ainsi que vos fichiers à interpréter. Ensuite, dans l'invite de commande, rentrez la commande suivante : \textit{python3 dumbo$\_$interpreter.py data template output}.
 
 \section{Grammaire}
 
 Pour ce projet, nous avons utilisé la grammaire de base du langage dumbo à laquelle nous avons apporté quelques modifications et ajouts : \begin{itemize}
 	\item[-] Tout d'abord nous avons ajouté la règle : $dumbo\_block: ( "\{\{"\ \ "\}\}" )$ pour pouvoir gérer les cas où nous aurions affaire à un dumbo$\_$block vide.
-	\item[-] Nous avons géré les différentes expressions individuelement afin de limiter les erreurs et simplifier la clarté du code. Pour ce qui est des expressions "print" nous l'avons séparée en deux cas distinct :\begin{itemize}
+	\item[-] Nous avons géré les différentes expressions individuellement afin de limiter les erreurs et simplifier la clarté du code. Pour ce qui est des expressions "print" nous l'avons séparée en deux cas distinct :\begin{itemize}
 		\item[$\bullet$] \textbf{print} affichera ce qui est attendu sans check supplémentaire. (Exemple : print 4 $\Rightarrow$ 4)
-		\item[$\bullet$] \textbf{print!} affichera ce qui est attendu exepté que les entiers deviendront des booléens. ( 0 $\Rightarrow$ False et le reste $\Rightarrow$ True). (Exemple : print! 4 $\Rightarrow$ True)	
+		\item[$\bullet$] \textbf{print!} affichera ce qui est attendu excepté que les entiers deviendront des booléens. ( 0 $\Rightarrow$ False et le reste $\Rightarrow$ True). (Exemple : print! 4 $\Rightarrow$ True)	
 	\end{itemize}
 	\item[-] Afin de gérer l'expression “if $<$ boolean $>$ do $<$ expressions list $>$ endif”, nous avons ajouté l'assignation d'un booléen à une variable.
 	\item[-] En plus de la grammaire de base de dumbo nous avons ajouté la possibilité de faire des opérations logiques (AND, OR, NOT, TRUE, FALSE) ainsi que des comparaisons logiques et arithmétiques ($ =, <, >, <=, >=, !=$).
-	\item[-] Dans la grammaire de base de dumbo, il n'y a pas de distinctions entre l'instanciation de variable et l'appel de celle-ci. C'est pourquoi, nous avons décidé de séparer celà en en fonctions différentes $\textit{variable\_set}$ et $\textit{variable\_get}$. Tel les set et get dans d'autres langages de programmation $\textit{variable\_get}$ ne fonctionnera que si la variable sur laquelle la fonction est appliquée existe déjà alors que $\textit{variable\_set}$ n'impose pas cette contrainte.
+	\item[-] Dans la grammaire de base de dumbo, il n'y a pas de distinctions entre l'instanciation de variable et l'appel de celle-ci. C'est pourquoi, nous avons décidé de séparer cela en en fonctions différentes $\textit{variable\_set}$ et $\textit{variable\_get}$. Tel les set et get dans d'autres langages de programmation $\textit{variable\_get}$ ne fonctionnera que si la variable sur laquelle la fonction est appliquée existe déjà alors que $\textit{variable\_set}$ n'impose pas cette contrainte.
 	\item[-] Enfin, nous demandons pour instancier une variable d'y ajouter son type (exemple : int x = 4)
 \end{itemize}
 
 \section{Gestion d'expression}
 
 \subsection{Gestion des variables locales et globales}
-Pour gérer les variables, nous avons décidé d'utiliser une liste chainée de dictionnaire où chaque maillon est un scope. Quand on détecte un nouveau dumbo bloc, nous créons un nouveau scope, on visite ensuite le bloc en insérent toutes les variables de ce bloc dans le scope nouvelement créé et lorsque le parcours du dumbo bloc est finis nous refusionnons le scope avec les variables globales.
+Pour gérer les variables, nous avons décidé d'utiliser une liste chainée de dictionnaire où chaque maillon est un scope. Quand on détecte un nouveau dumbo bloc, nous créons un nouveau scope, on visite ensuite le bloc en insérant toutes les variables de ce bloc dans le scope nouvellement créé et lorsque le parcours du dumbo bloc est finis nous refusionnons le scope avec les variables globales.
 
 \subsection{Gestion du for}
 
 Nous gérons les boucles for de la manière suivantes :\begin{enumerate}
 \item Tout d'abord nous créons une variable locale (loop$\_$variable). Nous l'assignons à la valeur correspondante dans la string$\_$list ou par rapport à la variable donnée dans un nouveau scope.
 \item On exécute le dumbo bloc à l'intérieur de la boucle.
-\item On efface la variable locale et on recommence l'opérationtant qu'il y a des éléments dans la string$\_$list.
+\item On efface la variable locale et on recommence l'opération tant qu'il y a des éléments dans la string$\_$list.
 \end{enumerate}
 \subsection{Gestion du if}
 Nous avons décidé de gérer les if de la manière suivante : \begin{enumerate}
@@ -98,21 +98,23 @@ Nous avons décidé de gérer les if de la manière suivante : \begin{enumerate}
 
 \section{choix personnel}
 
-Nous avons décidé d'utiliser la librairie LARK à la place de PLY car malgré le fait que nous ne l'ayons pas aborder en tp nous la trouvions plus adaptée pour la réalisation de notre projet.\\
+Nous avons décidé d'utiliser la librairie LARK à la place de PLY car malgré le fait que nous ne l'ayons pas aborder en tp nous la trouvions plus facile à prendre en main et elle respectait plus pour nous les conventions python. \\
 \\
-Il n'y a pas de booleen à la base avec notre compilateur. Quand nous gérons une condition logique, nous considérons $ 0 \Rightarrow False$ et $ (int \neq 0) \Rightarrow True$.\\
+Il n'y a pas de booléen à la base avec notre interpréteur. Quand nous gérons une condition logique, nous considérons $ 0 \Rightarrow False$ et $ (int \neq 0) \Rightarrow True$. \\
 \\
-Nous avons aussi choisi d'imposer un typage aux variables du fichier d'entrée. Cela nous permet de gérer plus facilement les erreurs de type lors de la compilation.
+Nous avons aussi choisi d'imposer un typage aux variables du fichier d'entrée. Cela nous permet de gérer plus facilement les erreurs de type lors de la compilation.\\
+\\
+Nous avons pris le partis de faire deux print différents comme expliqué dans la section grammaire ci-dessus. En effet, vu que nous n'utilisons pas de booléen, il nous fallait trouver un moyen de pouvoir tout de même en afficher au besoin. C'est pourquoi nous avons ajouté le print! qui transformera les entiers affichés en leur booléen correspondant (False $ \Rightarrow $ 0 et True $ \Rightarrow $ pour le reste) à l'inverse du print qui lui laissera tout entier sous sa forme classique.
 
 \section{Problème survenus}
 
-Un problème que nous avons rencontré est la gestion de la boucle for. En effet, nous utilisions un "Transformer" de Lark qui fonctionne en bottom-up ce qui entrainait que l'on parcourait d'abord l'intérieur de la boucle avant l'expression en elle-même. Pour résoudre celà, nous avons revu notre implémentation en utilisant la classe "Interpreter" de Lark à la place de "Transformer" qui elle utilise une approche top-down.
+Un problème que nous avons rencontré est la gestion de la boucle for. En effet, nous utilisions un "Transformer" de Lark qui fonctionne en bottom-up ce qui entrainait que l'on parcourait d'abord l'intérieur de la boucle avant l'expression en elle-même. Pour résoudre cela, nous avons revu notre implémentation en utilisant la classe "Interpreter" de Lark à la place de "Transformer" qui elle utilise une approche top-down.\\
 \\
-\\
+Nous n'utilisons pas de booléens dans notre projet juste des entiers ( 0 = False, 1 = True) ce qui fait qu'il n'y a pas de distinctions entre les deux. Par exemple tous les 1 de notre programme, s'ils sont mis dans des conditions seront considérés comme le booléen True.
 
 
 
 \section{Conclusion}
 
-Ce projet nous auras permis de mieux nous familiariser avec le processus de compilation et différents outils facilitant celui-ci. Si nous devions emettre une critique concernant notre projet, ça serait sur notre gestion des types. En effet, celle-ci est loin d'être vraiment optimisée.
+Ce projet nous auras permis de mieux nous familiariser avec le processus de compilation et différents outils facilitant celui-ci. Si nous devions émettre une critique concernant notre projet, ça serait sur notre gestion des types. En effet, celle-ci est loin d'être vraiment optimisée.
 \end{document}
