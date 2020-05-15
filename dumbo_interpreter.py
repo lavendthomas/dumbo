@@ -209,7 +209,7 @@ class DumboInterpreter(Interpreter):
         if isinstance(token, list):   # if a list variable is used as a parameter
             return str(token)
         if token.type == "VARIABLE":
-            return self.variables.get(token)         # TODO Afficher un message d'erreur si variable inconnue
+            return self.variables.get(token)
         else:
             raise InterpreterError(tree, "Unknown string type.")
 
