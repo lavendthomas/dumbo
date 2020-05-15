@@ -9,3 +9,5 @@
 \contentsline {section}{\numberline {5}choix personnel}{3}
 \contentsline {section}{\numberline {6}Probl\IeC {\`e}me survenus}{4}
 \contentsline {section}{\numberline {7}Conclusion}{4}
+\contentsline {section}{\numberline {8}Annexe}{5}
+\contentsline {subsection}{\numberline {8.1}Grammaire Lark}{5}
