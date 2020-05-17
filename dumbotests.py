@@ -48,7 +48,9 @@ class Test(unittest.TestCase):
 
     def test_txt_2(self):
         pgm = "<html>{{}}</html>"
-        self.assertEqual("<html></html>", interpret(pgm)    def test_for(self):
+        self.assertEqual("<html></html>", interpret(pgm))
+
+    def test_for(self):
         pgm = "{{str label := 'realises par Tony Kaye'; list liste_label := ('American History X', 'Snowblind', " \
               "'Lake of Fire');}}<html><head><title>Films {{ print label; }}</\title><head><body><h1><b>Films " \
               "{{ print label; }}<b><h1>{{for str nom_film in liste_label do print nom_film; print '<br>'; endfor; " \
