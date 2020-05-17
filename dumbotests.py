@@ -59,6 +59,10 @@ class Test(unittest.TestCase):
                          "es par Tony Kaye<b><h1>American History X<br>Snowblind<br>Lake of Fire<br><body"
                          "><html>", interpret(pgm))
 
+    def test_concat(self):
+        pgm = "{{str hw := 'hello' . 'world'; print hw;}}"
+        self.assertEqual("helloworld", interpret(pgm))
+
 if __name__ == "__main__":
     with open("dumbo.lark", "r") as grammar:
         GRAMMAR = grammar.read()
